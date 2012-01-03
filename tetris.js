@@ -1,17 +1,21 @@
 var ctx;
 var tick;
-var blockSpeed = 200/5000;
+var blockSpeed = 20/500;
+var freezeDelay = 500;
 var blockWidth = 20;
 var entities = [];
 var z = [];
 
+
+
 var grid = {
+  // Initialize grid to black and white
   g: _.range(30).map(function(i) {return _.range(11).map(function(j) { return i < 15 ? 1 : 0 })}),
   tiles: [[]],
   touches: function(t1) {
       return _(this.tiles).chain().flatten().any(function(t2) { return collide(t1, t2) && t1.color == t2.color }).value() 
   },
-  set: function(row,col,color) {this.g[row][col] = color},
+  set: function(row,col,color) {console.log("setting " + row + ", " + col + " to " + color); this.g[row][col] = color},
   update: function(delta) {
     this.render();
   },
@@ -42,6 +46,7 @@ function collide(t1, t2) {
 
 function draw() {
   ctx.clearRect(0,0,220,600);
+  z = _(z).reject(function(elem) {return elem.destroyed});
   _(z).invoke('draw', ctx);
 }  
 
@@ -50,6 +55,7 @@ function update(t) {
   if(!tick) { tick = t; }
   var delta = t - tick;
   tick = t;
+  entities = _(entities).reject(function(elem) {return elem.destroyed});
   _(entities).invoke('update', delta);
   draw();
 }
@@ -76,6 +82,9 @@ function tile(x, y, width, height, color) {
    draw: function(ctx) {
      ctx.fillStyle = this.color;
      ctx.fillRect(this.x, this.y, this.width, this.height);
+   },
+   destroy: function() {
+     this.destroyed = true;
    }
  });
 }
@@ -87,19 +96,35 @@ function block() {
     tiles.push({tile: t, offset: {x: blockWidth * i, y: 0}});
     z.push(t);
   }
-  return({
+  var b = { 
     x: 100,
     y: 10,
     velocity: {x: 0, y: blockSpeed},
     tiles: tiles,
     freeze: function() {
-      this.velocity = {x: 0, y: 0};
+      _(this.tiles).each(function(t){
+        grid.set(Math.round(t.tile.y / blockWidth), Math.round(t.tile.x / blockWidth), 0);
+      });
+      entities.push(block());
+      this.destroy();
     },
     update: function(delta) {
+      if (this.destroyed) {return;}
       this.y = this.y + this.velocity.y * delta;
       this.render();
+      this.checkCollision(delta);
+    },
+    destroy: function() {
+      _(this.tiles).chain().map(function(t){return t.tile}).invoke("destroy");
+      this.destroyed = true;
+    },
+    checkCollision: function(delta) {
       if(_(tiles).chain().map(function(t){return t.tile;}).any(function(t1) {return grid.touches(t1)}).value()){
-        this.freeze()
+        this.y = this.y - this.velocity.y * delta;
+        this.freezeIn = this.freezeIn ? this.freezeIn - delta : freezeDelay;
+        if (this.freezeIn <= 0) {
+          this.freeze();
+        }
       }
     },
     render: function() {
@@ -108,9 +133,21 @@ function block() {
         t.tile.y = this.y + t.offset.y;
       }, this);
     }
-  }); 
+  }; 
+  onKeyDown(KEYS["a"], function() {b.x = b.x - blockWidth;});
+  onKeyDown(KEYS["d"], function() {b.x = b.x + blockWidth;});
+  return b;
 }
 
+var KEYS = {
+  a: 65,
+  d: 68}
+
+function onKeyDown(code, callback) {
+  window.addEventListener("keydown", function(e){
+    if (e.keyCode == code) { return callback(e); }
+  });
+}
 window.addEventListener("DOMContentLoaded", function(){
   ctx = document.querySelector("canvas").getContext("2d");
 
