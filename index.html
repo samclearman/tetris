@@ -2,45 +2,7 @@
 <head>
 <title>blockety block block</title>
 <script src="lib/underscore.js"></script>
-<script>
-var ctx;
-var tick;
-
-function draw() {
-  ctx.clearRect(0,0,220,600);
-  _.invoke(z, 'draw', ctx);
-}  
-
-function update(t) {
-  window.requestAnimationFrame(update);
-  var delta = t - tick;
-  tick = t;
-  _.invoke(entities, 'update', delta);
-  draw();
-}
-
-function block(x, y, width, height) {
- return({
-   x: x,
-   y: y,
-   width: width,
-   height: height,
-   draw: function(ctx) {
-     ctx.fillRect(this.x, this.y, this.width, this.height);
-   }
- });
-}
-
-var z = [];
-
-window.addEventListener("DOMContentLoaded", function(){
-  ctx = document.querySelector("canvas").getContext("2d");
-
-  z.push(block(10,10,10,10));
-  draw();
-
-});
-</script>
+<script src="tetris.js"></script>
 </head>
 <body>
 <canvas width="220" height="600"></canvas>
