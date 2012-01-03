@@ -6,8 +6,27 @@ var blockWidth = 20;
 var entities = [];
 var z = [];
 
+// 
+// Basic pub/sub
+//
+var events = {
+  registrations: [],
+  pub: function(e) {
+    _(this.registrations).chain().filter(function(r) {return (r.type == e.type);}).each(function(r) {r.callback(e)});
+  },
+  sub: function(type, registrant, callback) {
+    this.registrations.push({type: type, callback: callback, registrant: registrant});
+  }
+}
 
+// events.sub('destroy', entities, function(e) {
+//   entities = _(entities).reject(function(a) {return(a.guid === e.thowerId);});
+// });
 
+//
+//  Create the grid
+//  This is essentially the level, there is only one
+//
 var grid = {
   // Initialize grid to black and white
   g: _.range(30).map(function(i) {return _.range(11).map(function(j) { return i < 15 ? 1 : 0 })}),
@@ -37,6 +56,10 @@ for(var i=0; i<30; i++) {
 }
 entities.push(grid);
 
+events.sub("freeze", grid, function(e) {
+  entities.push(block());
+});
+
 function collide(t1, t2) {
   return(
     ((t1.x > t2.x + t2.width)  || (t1.x + t1.width  < t2.x) ||
@@ -60,17 +83,6 @@ function update(t) {
   draw();
 }
 
-// shim layer with setTimeout fallback
-window.requestAnimFrame = (function(){
-return  window.requestAnimationFrame       || 
-      window.webkitRequestAnimationFrame || 
-      window.mozRequestAnimationFrame    || 
-      window.oRequestAnimationFrame      || 
-      window.msRequestAnimationFrame     || 
-      function( callback ){
-	window.setTimeout(callback, 1000 / 60);
-      };
-})()
 
 function tile(x, y, width, height, color) {
  return({
@@ -105,8 +117,8 @@ function block() {
       _(this.tiles).each(function(t){
         grid.set(Math.round(t.tile.y / blockWidth), Math.round(t.tile.x / blockWidth), 0);
       });
-      entities.push(block());
       this.destroy();
+      events.pub({type: "freeze", thrower: this});
     },
     update: function(delta) {
       if (this.destroyed) {return;}
@@ -148,6 +160,19 @@ function onKeyDown(code, callback) {
     if (e.keyCode == code) { return callback(e); }
   });
 }
+
+// shim layer with setTimeout fallback
+window.requestAnimFrame = (function(){
+return  window.requestAnimationFrame       || 
+      window.webkitRequestAnimationFrame || 
+      window.mozRequestAnimationFrame    || 
+      window.oRequestAnimationFrame      || 
+      window.msRequestAnimationFrame     || 
+      function( callback ){
+	window.setTimeout(callback, 1000 / 60);
+      };
+})()
+
 window.addEventListener("DOMContentLoaded", function(){
   ctx = document.querySelector("canvas").getContext("2d");
 
