@@ -8,6 +8,9 @@ var z = [];
 var grid = {
   g: _.range(30).map(function(i) {return _.range(11).map(function(j) { return i < 15 ? 1 : 0 })}),
   tiles: [[]],
+  touches: function(t1) {
+      return _(this.tiles).chain().flatten().any(function(t2) { return collide(t1, t2) && t1.color == t2.color }).value() 
+  },
   set: function(row,col,color) {this.g[row][col] = color},
   update: function(delta) {
     this.render();
@@ -91,7 +94,7 @@ function block() {
     update: function(delta) {
       this.y = this.y + blockSpeed * delta;
       this.render();
-      if(_(tiles).chain().map(function(t){return t.tile;}).any(function(t1) {return _(grid.tiles).chain().flatten().any(function(t2) { return collide(t1, t2) && t1.color == t2.color }).value();}).value()) {
+      if(_(tiles).chain().map(function(t){return t.tile;}).any(function(t1) {return grid.touches(t1)}).value()){
         console.log("collision");
       }
     },
