@@ -90,12 +90,16 @@ function block() {
   return({
     x: 100,
     y: 10,
+    velocity: {x: 0, y: blockSpeed},
     tiles: tiles,
+    freeze: function() {
+      this.velocity = {x: 0, y: 0};
+    },
     update: function(delta) {
-      this.y = this.y + blockSpeed * delta;
+      this.y = this.y + this.velocity.y * delta;
       this.render();
       if(_(tiles).chain().map(function(t){return t.tile;}).any(function(t1) {return grid.touches(t1)}).value()){
-        console.log("collision");
+        this.freeze()
       }
     },
     render: function() {
